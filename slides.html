@@ -454,6 +454,7 @@ Scraped review (scraping_reviews.Rmd)
 
 ```r
 library(readr)
+library(tidyr)
 reviews &lt;- read_csv("review_data.csv") %&gt;%
   select(movie, rating, review) %&gt;%
   drop_na()
@@ -464,7 +465,7 @@ reviews &lt;- read_csv("review_data.csv") %&gt;%
 ```
 ## # A tibble: 703 x 3
 ##    movie rating review                                                    
-##    &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;                                                     
+##    &lt;chr&gt;  &lt;dbl&gt; &lt;chr&gt;                                                     
 ##  1 elf        9 "This was my 4th viewing and now ready to review.The stor…
 ##  2 elf       10 "This was one of my favorite movies in 2003. Will Ferrell…
 ##  3 elf        7 "Charming Christmas confection--about a boy raised by elv…
@@ -505,8 +506,6 @@ library(tidymodels)
 library(textrecipes)
 ```
 
-
-
 `tidymodels` is a "meta-package" for modeling and statistical analysis that share the underlying design philosophy, grammar, and data structures of the tidyverse.
 
 `textrecipes` is an addition to the recipes package providing text processing capabilities (coming to CRAN any day)
@@ -519,7 +518,7 @@ library(textrecipes)
 set.seed(2018)
 
 split &lt;- reviews %&gt;%
-  mutate(good = rating &gt; 5) %&gt;%
+  mutate(good = factor(rating &gt; 5, labels = c("bad", "good"))) %&gt;%
   select(good, text = review) %&gt;%
   initial_split(props = 7 / 10)
 
@@ -545,7 +544,7 @@ Next we specify a preprocesing step using recipes
 ```r
 review_rec &lt;- recipe(good ~ ., data = review_train) %&gt;%
   step_tokenize(text) %&gt;%
-  step_tokenfilter(text, max_tokens = 10) %&gt;%
+  step_tokenfilter(text, max_tokens = 500) %&gt;%
   step_tfidf(text) %&gt;%
   prep(training = review_train)
 
@@ -578,7 +577,7 @@ review_rec
 ```r
 # Processed data
 train_data &lt;- juice(review_rec)
-test_data  &lt;- bake(review_rec, review_test)
+test_data  &lt;- bake(review_rec, review_test, all_predictors())
 ```
 
 
@@ -587,21 +586,54 @@ train_data
 ```
 
 ```
-## # A tibble: 528 x 11
-##    good  tf_text_a tf_text_and tf_text_i tf_text_in tf_text_is tf_text_it
-##    &lt;lgl&gt;     &lt;dbl&gt;       &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;      &lt;dbl&gt;      &lt;dbl&gt;
-##  1 TRUE          4           2         1          4          2          3
-##  2 TRUE          7           7         0          4          3          0
-##  3 TRUE          7           8         0          3          0          0
-##  4 TRUE          8           4         3          1          1          3
-##  5 TRUE          5           5         8          5          7          3
-##  6 TRUE          6           4         2          1          1          6
-##  7 TRUE          8           8         4          2          3          1
-##  8 TRUE         22          23         6          6         21          2
-##  9 TRUE         11           4         0          4          8          0
-## 10 TRUE         25          23         0         14          7         10
-## # ... with 518 more rows, and 4 more variables: tf_text_of &lt;dbl&gt;,
-## #   tf_text_the &lt;dbl&gt;, tf_text_this &lt;dbl&gt;, tf_text_to &lt;dbl&gt;
+## # A tibble: 528 x 501
+##    good  tf_text_1 tf_text_10 tf_text_2 tf_text_5 tf_text_6 tf_text_7
+##    &lt;fct&gt;     &lt;dbl&gt;      &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+##  1 good          0          0         0         0         0         0
+##  2 good          0          0         0         0         0         0
+##  3 good          0          0         0         0         0         0
+##  4 good          0          0         0         0         0         0
+##  5 good          0          0         0         0         0         0
+##  6 good          0          0         0         0         0         0
+##  7 good          0          0         0         1         0         0
+##  8 good          0          1         0         0         0         0
+##  9 good          0          1         0         0         0         0
+## 10 good          0          1         0         0         0         0
+## # ... with 518 more rows, and 494 more variables: tf_text_8 &lt;dbl&gt;,
+## #   tf_text_a &lt;dbl&gt;, tf_text_about &lt;dbl&gt;, tf_text_absolutely &lt;dbl&gt;,
+## #   tf_text_acting &lt;dbl&gt;, tf_text_action &lt;dbl&gt;, tf_text_actor &lt;dbl&gt;,
+## #   tf_text_actors &lt;dbl&gt;, tf_text_actually &lt;dbl&gt;, tf_text_added &lt;dbl&gt;,
+## #   tf_text_adult &lt;dbl&gt;, tf_text_adults &lt;dbl&gt;, tf_text_after &lt;dbl&gt;,
+## #   tf_text_again &lt;dbl&gt;, tf_text_all &lt;dbl&gt;, tf_text_almost &lt;dbl&gt;,
+## #   tf_text_along &lt;dbl&gt;, tf_text_already &lt;dbl&gt;, tf_text_also &lt;dbl&gt;,
+## #   tf_text_although &lt;dbl&gt;, tf_text_always &lt;dbl&gt;, tf_text_am &lt;dbl&gt;,
+## #   tf_text_amazing &lt;dbl&gt;, tf_text_an &lt;dbl&gt;, tf_text_and &lt;dbl&gt;,
+## #   tf_text_animated &lt;dbl&gt;, tf_text_annoying &lt;dbl&gt;, tf_text_another &lt;dbl&gt;,
+## #   tf_text_anthony &lt;dbl&gt;, tf_text_any &lt;dbl&gt;, tf_text_anyone &lt;dbl&gt;,
+## #   tf_text_anything &lt;dbl&gt;, tf_text_are &lt;dbl&gt;, tf_text_around &lt;dbl&gt;,
+## #   tf_text_as &lt;dbl&gt;, tf_text_asner &lt;dbl&gt;, tf_text_at &lt;dbl&gt;,
+## #   tf_text_audience &lt;dbl&gt;, tf_text_away &lt;dbl&gt;, tf_text_baby &lt;dbl&gt;,
+## #   tf_text_back &lt;dbl&gt;, tf_text_bad &lt;dbl&gt;, tf_text_be &lt;dbl&gt;,
+## #   tf_text_because &lt;dbl&gt;, tf_text_become &lt;dbl&gt;, tf_text_been &lt;dbl&gt;,
+## #   tf_text_before &lt;dbl&gt;, tf_text_being &lt;dbl&gt;, tf_text_believe &lt;dbl&gt;,
+## #   tf_text_best &lt;dbl&gt;, tf_text_better &lt;dbl&gt;, tf_text_between &lt;dbl&gt;,
+## #   tf_text_big &lt;dbl&gt;, tf_text_bit &lt;dbl&gt;, tf_text_bob &lt;dbl&gt;,
+## #   tf_text_book &lt;dbl&gt;, tf_text_boring &lt;dbl&gt;, tf_text_both &lt;dbl&gt;,
+## #   tf_text_brings &lt;dbl&gt;, tf_text_brought &lt;dbl&gt;, tf_text_buddy &lt;dbl&gt;,
+## #   `tf_text_buddy's` &lt;dbl&gt;, tf_text_but &lt;dbl&gt;, tf_text_buy &lt;dbl&gt;,
+## #   tf_text_by &lt;dbl&gt;, tf_text_caan &lt;dbl&gt;, tf_text_came &lt;dbl&gt;,
+## #   tf_text_can &lt;dbl&gt;, `tf_text_can't` &lt;dbl&gt;, tf_text_carey &lt;dbl&gt;,
+## #   tf_text_carrey &lt;dbl&gt;, `tf_text_carrey's` &lt;dbl&gt;, tf_text_cartoon &lt;dbl&gt;,
+## #   tf_text_cast &lt;dbl&gt;, tf_text_character &lt;dbl&gt;, tf_text_characters &lt;dbl&gt;,
+## #   tf_text_charming &lt;dbl&gt;, tf_text_child &lt;dbl&gt;, tf_text_childhood &lt;dbl&gt;,
+## #   tf_text_children &lt;dbl&gt;, `tf_text_children's` &lt;dbl&gt;,
+## #   tf_text_christmas &lt;dbl&gt;, tf_text_cindy &lt;dbl&gt;, tf_text_city &lt;dbl&gt;,
+## #   tf_text_classic &lt;dbl&gt;, tf_text_claus &lt;dbl&gt;, tf_text_come &lt;dbl&gt;,
+## #   tf_text_comedy &lt;dbl&gt;, tf_text_comes &lt;dbl&gt;, tf_text_completely &lt;dbl&gt;,
+## #   tf_text_costumes &lt;dbl&gt;, tf_text_could &lt;dbl&gt;, `tf_text_couldn't` &lt;dbl&gt;,
+## #   tf_text_course &lt;dbl&gt;, tf_text_cute &lt;dbl&gt;, tf_text_dad &lt;dbl&gt;,
+## #   tf_text_day &lt;dbl&gt;, tf_text_definitely &lt;dbl&gt;, tf_text_department &lt;dbl&gt;,
+## #   tf_text_deschanel &lt;dbl&gt;, …
 ```
 
 ---
@@ -609,27 +641,36 @@ train_data
 
 ```r
 review_model &lt;- logistic_reg() %&gt;%
-  set_engine("glmnet")
+  set_engine("glm")
 ```
 
 
 ```r
 review_fit &lt;- review_model %&gt;%
-  fit(good ~ ., data = review_train)
+  fit(good ~ ., data = train_data)
 ```
 
 
 ```r
-predict_class(review_fit, new_data = test_data)
+test_results &lt;- review_test %&gt;%
+  select(good) %&gt;%
+  as_tibble() %&gt;%
+  mutate(
+    class = predict_class(review_fit, test_data),
+  )
+
+test_results %&gt;% accuracy(truth = good, estimate = class)
+```
+
+```
+## # A tibble: 1 x 3
+##   .metric  .estimator .estimate
+##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
+## 1 accuracy binary          0.56
 ```
 
 
-```
-##    
-##       0   1
-##   0  50 123
-##   1  96 259
-```
+(This is not an example of finished classification. The Accuracy is not that good, but the general steps you would follow.)
     </textarea>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
 <script src="macros.js"></script>

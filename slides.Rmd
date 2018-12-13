@@ -37,6 +37,7 @@ knit_hooks$set(output = function(x, options) {
   x <- paste(c(x, ""), collapse = "\n")
   hook_output(x, options)
 })
+library(tidyr)
 ``` 
 
 # What is Natural Language Processing (NLP)
@@ -373,6 +374,7 @@ Scraped review (scraping_reviews.Rmd)
 
 ```{r, message=FALSE}
 library(readr)
+library(tidyr)
 reviews <- read_csv("review_data.csv") %>%
   select(movie, rating, review) %>%
   drop_na()
@@ -400,16 +402,9 @@ ggplot(reviews, aes(as.factor(rating), 1, fill = movie)) +
 
 ## tidymodels
 
-```{r, eval=FALSE}
+```{r}
 library(tidymodels)
 #devtools::install_github("tidymodels/textrecipes")
-library(textrecipes)
-```
-
-```{r, echo=FALSE}
-library(rsample)
-library(parsnip)
-library(recipes)
 library(textrecipes)
 ```
 
@@ -424,7 +419,7 @@ library(textrecipes)
 set.seed(2018)
 
 split <- reviews %>%
-  mutate(good = rating > 5) %>%
+  mutate(good = factor(rating > 5, labels = c("bad", "good"))) %>%
   select(good, text = review) %>%
   initial_split(props = 7 / 10)
 
@@ -449,7 +444,7 @@ Next we specify a preprocesing step using recipes
 ```{r, eval=FALSE}
 review_rec <- recipe(good ~ ., data = review_train) %>%
   step_tokenize(text) %>%
-  step_tokenfilter(text, max_tokens = 10) %>%
+  step_tokenfilter(text, max_tokens = 500) %>%
   step_tfidf(text) %>%
   prep(training = review_train)
 
@@ -460,7 +455,7 @@ review_rec
 ```{r, echo=FALSE}
 review_rec <- recipe(good ~ ., data = review_train) %>%
   step_tokenize(text) %>%
-  step_tokenfilter(text, max_tokens = 10) %>%
+  step_tokenfilter(text, max_tokens = 500) %>%
   step_tf(text) %>%
   prep(training = review_train)
 
@@ -472,7 +467,7 @@ review_rec
 ```{r}
 # Processed data
 train_data <- juice(review_rec)
-test_data  <- bake(review_rec, review_test)
+test_data  <- bake(review_rec, review_test, all_predictors())
 ```
 
 ```{r}
@@ -481,22 +476,26 @@ train_data
 
 ---
 
-```{r, eval=FALSE}
+```{r}
 review_model <- logistic_reg() %>%
-  set_engine("glmnet")
+  set_engine("glm")
 ```
 
-```{r, message=FALSE, eval=FALSE}
+```{r, message=FALSE, warning=FALSE}
 review_fit <- review_model %>%
-  fit(good ~ ., data = review_train)
+  fit(good ~ ., data = train_data)
 ```
 
-```{r, eval=FALSE}
-predict_class(review_fit, new_data = test_data)
+```{r}
+test_results <- review_test %>%
+  select(good) %>%
+  as_tibble() %>%
+  mutate(
+    class = predict_class(review_fit, test_data),
+  )
+
+test_results %>% accuracy(truth = good, estimate = class)
 ```
 
-```{r, echo=FALSE}
-table(sample(c(0, 1), 528, replace=TRUE, prob = c(0.3, 0.7)),
-      sample(c(0, 1), 528, replace=TRUE, prob = c(0.3, 0.7)))
-```
 
+(This is not an example of finished classification. The Accuracy is not that good, but the general steps you would follow.)
